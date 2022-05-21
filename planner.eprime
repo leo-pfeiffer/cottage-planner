@@ -1,0 +1,78 @@
+language ESSENCE' 1.0
+
+given nCottages : int
+given nGuests : int
+
+letting BINARY be domain int(0..1)
+letting COTTAGES be domain int(1..nCottages)
+letting GUESTS be domain int(1..nGuests)
+
+given capacity : matrix indexed by [COTTAGES] of int(0..)
+given cost : matrix indexed by [COTTAGES] of int(0..)
+
+given s : matrix indexed by [GUESTS, GUESTS] of BINARY  $ share
+given ss : matrix indexed by [GUESTS, GUESTS] of BINARY $ strict share
+
+given n : matrix indexed by [GUESTS, GUESTS] of BINARY  $ not share
+given nn : matrix indexed by [GUESTS, GUESTS] of BINARY $ strict not share
+
+find allocation : matrix indexed by [GUESTS] of COTTAGES
+
+find sPenalty : int(0..nGuests*nGuests)
+find nPenalty : int(0..nGuests*nGuests)
+
+find usedCapacity : matrix indexed by [COTTAGES] of int(0..1000)
+
+such that
+
+$ penalties
+sPenalty = (
+    sum i : int(1..nGuests-1) . 
+        sum j : int(i+1..nGuests) . 
+            (s[i,j]=1 /\ allocation[i]!=allocation[j])
+    ),
+
+nPenalty = (
+    sum i : int(1..nGuests-1) . 
+        sum j : int(i+1..nGuests) . 
+            (n[i,j]=1 /\ allocation[i]=allocation[j])
+    ),
+
+$ used capacity
+forAll c : COTTAGES .
+    usedCapacity[c] = (sum i : GUESTS . allocation[i]=c),
+
+$ capacity constraint
+atmost(allocation, [i | i : COTTAGES], capacity),
+
+$ share/not share are not contradictory
+forAll i : GUESTS .
+    forAll j : GUESTS .
+        (s[i,j] = 1 -> n[i,j] = 0) /\
+        (s[i,j] = 1 -> nn[i,j] = 0) /\
+        (n[i,j] = 1 -> s[i,j] = 0) /\ 
+        (n[i,j] = 1 -> ss[i,j] = 0) /\ 
+        (ss[i,j] = 1 -> n[i,j] = 0) /\ 
+        (ss[i,j] = 1 -> nn[i,j] = 0) /\ 
+        (nn[i,j] = 1 -> s[i,j] = 0) /\
+        (nn[i,j] = 1 -> ss[i,j] = 0),
+
+$ transpose of share/not share are same as original
+forAll i : GUESTS .
+    forAll j : GUESTS .
+        (s[i,j] = s[j,i]) /\ 
+        (ss[i,j] = ss[j,i]) /\ 
+        (n[i,j] = n[j,i]) /\ 
+        (nn[i,j] = nn[j,i]),
+
+$ strict shares
+forAll i : GUESTS .
+    forAll j : GUESTS .
+        (ss[i,j] = 1) -> (allocation[i] = allocation[j]),
+
+$ strict not shares
+forAll i : GUESTS .
+    forAll j : GUESTS .
+        (nn[i,j] = 1) -> (allocation[i] != allocation[j]),
+
+true
